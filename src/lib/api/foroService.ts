@@ -140,7 +140,7 @@ export class ForoService {
         totalLikes: posts.reduce((sum, post) => sum + post.likes, 0),
         totalComments: posts.reduce((sum, post) => sum + post.comments, 0),
         recentPosts: posts.filter(post => 
-          new Date(post.createdAt) > oneWeekAgo
+          new Date(post.created_at) > oneWeekAgo
         ).length,
       };
       return stats;

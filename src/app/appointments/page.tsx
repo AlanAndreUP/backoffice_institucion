@@ -14,17 +14,19 @@ import {
 } from '@heroicons/react/24/outline';
 
 const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-  completed: 'bg-blue-100 text-blue-800',
+  pendiente: 'bg-yellow-100 text-yellow-800',
+  confirmada: 'bg-green-100 text-green-800',
+  cancelada: 'bg-red-100 text-red-800',
+  completada: 'bg-blue-100 text-blue-800',
+  no_asistio: 'bg-gray-100 text-gray-800',
 };
 
 const statusIcons = {
-  pending: ClockIcon,
-  confirmed: CheckCircleIcon,
-  cancelled: XCircleIcon,
-  completed: CheckCircleIcon,
+  pendiente: ClockIcon,
+  confirmada: CheckCircleIcon,
+  cancelada: XCircleIcon,
+  completada: CheckCircleIcon,
+  no_asistio: XCircleIcon,
 };
 
 export default function AppointmentsPage() {
@@ -44,39 +46,36 @@ export default function AppointmentsPage() {
       const mockAppointments: Appointment[] = [
         {
           id: '1',
-          userId: 'user1',
-          tutorId: 'tutor1',
-          date: '2024-01-15',
-          time: '14:00',
-          status: 'confirmed',
-          subject: 'Matemáticas',
-          description: 'Clase de álgebra',
-          createdAt: '2024-01-10T10:00:00Z',
-          updatedAt: '2024-01-10T10:00:00Z',
+          id_tutor: 'tutor1',
+          id_alumno: 'alumno1',
+          fecha_cita: '2024-01-15T14:00:00Z',
+          estado_cita: 'confirmada',
+          to_do: 'Clase de álgebra - Matemáticas',
+          tareas_completadas: [],
+          created_at: '2024-01-10T10:00:00Z',
+          updated_at: '2024-01-10T10:00:00Z',
         },
         {
           id: '2',
-          userId: 'user2',
-          tutorId: 'tutor2',
-          date: '2024-01-16',
-          time: '16:00',
-          status: 'pending',
-          subject: 'Física',
-          description: 'Mecánica clásica',
-          createdAt: '2024-01-11T09:00:00Z',
-          updatedAt: '2024-01-11T09:00:00Z',
+          id_tutor: 'tutor2',
+          id_alumno: 'alumno2',
+          fecha_cita: '2024-01-16T16:00:00Z',
+          estado_cita: 'pendiente',
+          to_do: 'Mecánica clásica - Física',
+          tareas_completadas: [],
+          created_at: '2024-01-11T09:00:00Z',
+          updated_at: '2024-01-11T09:00:00Z',
         },
         {
           id: '3',
-          userId: 'user3',
-          tutorId: 'tutor1',
-          date: '2024-01-14',
-          time: '10:00',
-          status: 'completed',
-          subject: 'Química',
-          description: 'Reacciones químicas',
-          createdAt: '2024-01-09T14:00:00Z',
-          updatedAt: '2024-01-14T10:00:00Z',
+          id_tutor: 'tutor1',
+          id_alumno: 'alumno3',
+          fecha_cita: '2024-01-14T10:00:00Z',
+          estado_cita: 'completada',
+          to_do: 'Reacciones químicas - Química',
+          tareas_completadas: ['Teoría básica', 'Ejercicios prácticos'],
+          created_at: '2024-01-09T14:00:00Z',
+          updated_at: '2024-01-14T10:00:00Z',
         },
       ];
       setAppointments(mockAppointments);
@@ -89,15 +88,15 @@ export default function AppointmentsPage() {
 
   const filteredAppointments = appointments.filter(appointment => {
     if (filter === 'all') return true;
-    return appointment.status === filter;
+    return appointment.estado_cita === filter;
   });
 
-  const updateAppointmentStatus = async (id: string, status: Appointment['status']) => {
+  const updateAppointmentStatus = async (id: string, status: Appointment['estado_cita']) => {
     try {
       // Aquí se actualizaría el estado en la API
       setAppointments(prev => 
         prev.map(app => 
-          app.id === id ? { ...app, status, updatedAt: new Date().toISOString() } : app
+          app.id === id ? { ...app, estado_cita: status, updated_at: new Date().toISOString() } : app
         )
       );
     } catch (error) {
@@ -158,33 +157,33 @@ export default function AppointmentsPage() {
               Todas
             </button>
             <button
-              onClick={() => setFilter('pending')}
+              onClick={() => setFilter('pendiente')}
               className={`px-3 py-1 rounded-md text-sm font-medium ${
-                filter === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'text-gray-500 hover:text-gray-700'
+                filter === 'pendiente' ? 'bg-yellow-100 text-yellow-700' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               Pendientes
             </button>
             <button
-              onClick={() => setFilter('confirmed')}
+              onClick={() => setFilter('confirmada')}
               className={`px-3 py-1 rounded-md text-sm font-medium ${
-                filter === 'confirmed' ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:text-gray-700'
+                filter === 'confirmada' ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               Confirmadas
             </button>
             <button
-              onClick={() => setFilter('completed')}
+              onClick={() => setFilter('completada')}
               className={`px-3 py-1 rounded-md text-sm font-medium ${
-                filter === 'completed' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'
+                filter === 'completada' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               Completadas
             </button>
             <button
-              onClick={() => setFilter('cancelled')}
+              onClick={() => setFilter('cancelada')}
               className={`px-3 py-1 rounded-md text-sm font-medium ${
-                filter === 'cancelled' ? 'bg-red-100 text-red-700' : 'text-gray-500 hover:text-gray-700'
+                filter === 'cancelada' ? 'bg-red-100 text-red-700' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
               Canceladas
@@ -223,28 +222,28 @@ export default function AppointmentsPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredAppointments.map((appointment) => {
-                  const StatusIcon = statusIcons[appointment.status];
+                  const StatusIcon = statusIcons[appointment.estado_cita];
                   return (
                     <tr key={appointment.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        Estudiante {appointment.userId}
+                        Estudiante {appointment.id_alumno}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        Tutor {appointment.tutorId}
+                        Tutor {appointment.id_tutor}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(appointment.date).toLocaleDateString()}
+                        {new Date(appointment.fecha_cita).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {appointment.time}
+                        {new Date(appointment.fecha_cita).toLocaleTimeString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {appointment.subject}
+                        {appointment.to_do}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[appointment.status]}`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[appointment.estado_cita]}`}>
                           <StatusIcon className="h-3 w-3 mr-1" />
-                          {appointment.status}
+                          {appointment.estado_cita}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -284,39 +283,39 @@ export default function AppointmentsPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Estudiante</label>
-                    <p className="text-sm text-gray-900">Estudiante {selectedAppointment.userId}</p>
+                    <p className="text-sm text-gray-900">Estudiante {selectedAppointment.id_alumno}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Tutor</label>
-                    <p className="text-sm text-gray-900">Tutor {selectedAppointment.tutorId}</p>
+                    <p className="text-sm text-gray-900">Tutor {selectedAppointment.id_tutor}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Fecha</label>
-                    <p className="text-sm text-gray-900">{new Date(selectedAppointment.date).toLocaleDateString()}</p>
+                    <p className="text-sm text-gray-900">{new Date(selectedAppointment.fecha_cita).toLocaleDateString()}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Hora</label>
-                    <p className="text-sm text-gray-900">{selectedAppointment.time}</p>
+                    <p className="text-sm text-gray-900">{new Date(selectedAppointment.fecha_cita).toLocaleTimeString()}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Asunto</label>
-                    <p className="text-sm text-gray-900">{selectedAppointment.subject}</p>
+                    <p className="text-sm text-gray-900">{selectedAppointment.to_do}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Descripción</label>
-                    <p className="text-sm text-gray-900">{selectedAppointment.description}</p>
+                    <label className="block text-sm font-medium text-gray-700">Tareas Completadas</label>
+                    <p className="text-sm text-gray-900">{selectedAppointment.tareas_completadas?.join(', ') || 'Ninguna'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Estado</label>
                     <select
-                      value={selectedAppointment.status}
-                      onChange={(e) => updateAppointmentStatus(selectedAppointment.id, e.target.value as Appointment['status'])}
+                      value={selectedAppointment.estado_cita}
+                      onChange={(e) => updateAppointmentStatus(selectedAppointment.id, e.target.value as Appointment['estado_cita'])}
                       className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                     >
-                      <option value="pending">Pendiente</option>
-                      <option value="confirmed">Confirmada</option>
-                      <option value="completed">Completada</option>
-                      <option value="cancelled">Cancelada</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="confirmada">Confirmada</option>
+                      <option value="completada">Completada</option>
+                      <option value="cancelada">Cancelada</option>
                     </select>
                   </div>
                 </div>

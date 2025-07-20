@@ -43,10 +43,29 @@ export default function ForoPage() {
       };
       
       const response = await ForoService.getPosts();
-      setPosts(response.data || response);
-      setTotalPages(response.pagination?.totalPages || 1);
+      // Si response tiene la forma { data, pagination }, úsala; si es un array, úsalo directamente
+      let postsData: Post[] = [];
+      let totalPagesValue = 1;
+
+      if (Array.isArray(response)) {
+        postsData = response;
+        totalPagesValue = 1;
+        // Corregido: Añadimos comprobación de tipos para evitar errores de TypeScript
+      } else if (
+        response &&
+        typeof response === 'object' &&
+        'data' in response &&
+        Array.isArray((response as { data: unknown }).data)
+      ) {
+        const respObj = response as { data: Post[]; pagination?: { totalPages?: number } };
+        postsData = respObj.data || [];
+        totalPagesValue = respObj.pagination?.totalPages || 1;
+      }
+
+      setPosts(postsData);
+      setTotalPages(totalPagesValue);
     } catch (error) {
-      console.error('Error loading posts:', error);
+      console.error('Error cargando publicaciones:', error);
     } finally {
       setLoading(false);
     }
@@ -61,7 +80,8 @@ export default function ForoPage() {
     try {
       setLoading(true);
       const response = await ForoService.searchPosts(searchTerm);
-      setPosts(response.data || response);
+      // Por ahora usamos datos mock hasta que el servicio esté implementado
+      setPosts(response as Post[]);
     } catch (error) {
       console.error('Error searching posts:', error);
     } finally {
@@ -71,7 +91,7 @@ export default function ForoPage() {
 
   const createPost = async (postData: CreatePostForm) => {
     try {
-      const newPost = await ForoService.createPost(postData);
+      const newPost = await ForoService.createPost(postData as any);
       setPosts(prev => [newPost, ...prev]);
       setShowCreateModal(false);
     } catch (error) {

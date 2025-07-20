@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_CONFIG, createAuthHeaders, REQUEST_TIMEOUT } from './config';
-import { User, Tutor, ApiResponse, PaginatedResponse } from '@/types';
+import { User, ApiResponse, PaginatedResponse } from '@/types';
 
 const userApi = axios.create({
   baseURL: API_CONFIG.AUTH_SERVICE.baseURL,
@@ -37,11 +37,14 @@ export class UserService {
   }
 
   // Obtener todos los tutores
-  static async getTutors(token?: string): Promise<Tutor[]> {
+  static async getTutors(token?: string): Promise<User[]> {
     try {
       const response = await userApi.get(
-        API_CONFIG.AUTH_SERVICE.endpoints.tutors,
-        { headers: createAuthHeaders(token) }
+        API_CONFIG.AUTH_SERVICE.endpoints.users,
+        { 
+          params: { tipo_usuario: 'tutor' },
+          headers: createAuthHeaders(token) 
+        }
       );
       return response.data.data || response.data;
     } catch (error) {
@@ -54,8 +57,11 @@ export class UserService {
   static async getStudents(token?: string): Promise<User[]> {
     try {
       const response = await userApi.get(
-        API_CONFIG.AUTH_SERVICE.endpoints.students,
-        { headers: createAuthHeaders(token) }
+        API_CONFIG.AUTH_SERVICE.endpoints.users,
+        { 
+          params: { tipo_usuario: 'alumno' },
+          headers: createAuthHeaders(token) 
+        }
       );
       return response.data.data || response.data;
     } catch (error) {
@@ -75,11 +81,18 @@ export class UserService {
       days: string[];
       hours: string[];
     };
-  }, token?: string): Promise<Tutor> {
+  }, token?: string): Promise<User> {
     try {
       const response = await userApi.post(
-        API_CONFIG.AUTH_SERVICE.endpoints.tutors,
-        { ...tutorData, userType: 'tutor' },
+        API_CONFIG.AUTH_SERVICE.endpoints.users,
+        { 
+          ...tutorData, 
+          tipo_usuario: 'tutor',
+          nombre: tutorData.name,
+          correo: tutorData.email,
+          contraseña: tutorData.password,
+          codigo_institucion: tutorData.institutionCode,
+        },
         { headers: createAuthHeaders(token) }
       );
       return response.data.data || response.data;
@@ -152,9 +165,9 @@ export class UserService {
         totalUsers: users.length,
         totalTutors: tutors.length,
         totalStudents: students.length,
-        activeUsers: users.filter(user => user.isActive).length,
+        activeUsers: users.filter(user => user.is_active).length,
         recentRegistrations: users.filter(user => 
-          new Date(user.createdAt) > oneMonthAgo
+          new Date(user.created_at) > oneMonthAgo
         ).length,
       };
       return stats;
