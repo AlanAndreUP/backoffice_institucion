@@ -47,8 +47,8 @@ export class TutorService {
   // 1. Obtener Todos los Usuarios
   static async getAllUsers(): Promise<User[]> {
     try {
-      const response = await tutorApi.get<ApiResponse<User[]>>(API_CONFIG.BASE_API.endpoints.users);
-      return response.data.data || [];
+      const response = await tutorApi.get<ApiResponse<{ users: User[]; total: number }>>(API_CONFIG.BASE_API.endpoints.users);
+      return response.data.data?.users || [];
     } catch (error: any) {
       console.error('Error fetching all users:', error);
       if (error.response?.status === 500) {
@@ -78,9 +78,8 @@ export class TutorService {
       if (!userId) {
         throw new Error('ID de usuario requerido');
       }
-      
-      const response = await tutorApi.get<ApiResponse<User>>(API_CONFIG.BASE_API.endpoints.user(userId));
-      return response.data.data;
+      const response = await tutorApi.get<ApiResponse<{ user: User }>>(API_CONFIG.BASE_API.endpoints.user(userId));
+      return response.data.data?.user;
     } catch (error: any) {
       console.error('Error fetching user by ID:', error);
       if (error.response?.status === 400) {

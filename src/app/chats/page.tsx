@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Layout from '@/components/layout/Layout';
-import { ChatMessage, ChatAttempt, Conversation } from '@/types';
+import { ChatMessage, ChatAttempt, Conversation, User } from '@/types';
 import { ChatService } from '@/lib/api/chatService';
+import { TutorService } from '@/lib/api/tutorService';
 import {
   ChatBubbleLeftRightIcon,
   UserIcon,
@@ -42,6 +43,7 @@ export default function ChatsPage() {
   const [adminStatus, setAdminStatus] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [userCache, setUserCache] = useState<{ [userId: string]: User }>({});
 
   useEffect(() => {
     loadAdminStatus();
@@ -125,6 +127,31 @@ export default function ChatsPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('es-ES');
+  };
+
+  // Función para obtener el nombre de usuario por ID con caché
+  const getUserName = (userId: string) => {
+    if (!userId) return 'Desconocido';
+    if (userCache[userId]) return userCache[userId].nombre;
+    // Si no está en caché, hacer la petición y actualizar el caché
+    TutorService.getUserById(userId).then(user => {
+      setUserCache(prev => ({ ...prev, [userId]: user }));
+    }).catch(() => {
+      setUserCache(prev => ({
+        ...prev,
+        [userId]: {
+          id: userId,
+          nombre: 'Desconocido',
+          correo: '',
+          tipo_usuario: 'alumno', // Valor por defecto válido
+          codigo_institucion: '',
+          is_active: false,
+          created_at: '',
+          updated_at: ''
+        }
+      }));
+    });
+    return 'Cargando...';
   };
 
   if (loading && !adminStatus) {
@@ -318,7 +345,7 @@ export default function ChatsPage() {
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <span className="text-sm font-medium text-gray-900">
-                                {message.is_ai_response ? 'IA' : `Usuario: ${message.usuario_id}`}
+                                {message.is_ai_response ? 'IA' : getUserName(message.usuario_id)}
                               </span>
                             </div>
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${messageStatusColors[message.estado]}`}>

@@ -2,13 +2,13 @@
 export const API_CONFIG = {
   // API Base para endpoints sin autenticación
   BASE_API: {
-    baseURL: process.env.NEXT_PUBLIC_FORO_API_URL || 'http://localhost:3000',
+    baseURL: 'http://localhost:3001',
     endpoints: {
       users: '/auth/users',
-      user: (id: string) => `/auth/users/${id}`,
-      usersByType: (type: string) => `/auth/users/`,
+      user: (id: string) => `/auth/user/${id}`,
+      usersByType: (type: string) => `/auth/user/`,
       tutors: '/auth/tutors',
-      codes: '/auth//tutor-codes',
+      codes: '/auth/tutor-codes',
       send: '/auth/tutor-codes/send',
     }
   },
