@@ -6,10 +6,10 @@ export const API_CONFIG = {
     endpoints: {
       users: '/auth/users',
       user: (id: string) => `/auth/users/${id}`,
-      usersByType: (type: string) => `/auth/users/type/${type}`,
+      usersByType: (type: string) => `/auth/users/`,
       tutors: '/auth/tutors',
-      codes: '/auth/codes',
-      send: '/auth/send',
+      codes: '/auth//tutor-codes',
+      send: '/auth/tutor-codes/send',
     }
   },
   

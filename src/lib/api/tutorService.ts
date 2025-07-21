@@ -61,8 +61,8 @@ export class TutorService {
   // 2. Obtener Todos los Tutores
   static async getAllTutors(): Promise<User[]> {
     try {
-      const response = await tutorApi.get<ApiResponse<User[]>>(API_CONFIG.BASE_API.endpoints.tutors);
-      return response.data.data || [];
+      const response = await tutorApi.get<ApiResponse<{ tutors: User[]; total: number }>>(API_CONFIG.BASE_API.endpoints.tutors);
+      return response.data.data?.tutors || [];
     } catch (error: any) {
       console.error('Error fetching all tutors:', error);
       if (error.response?.status === 500) {
