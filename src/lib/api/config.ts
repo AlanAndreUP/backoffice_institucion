@@ -2,7 +2,7 @@
 export const API_CONFIG = {
   // API Base para endpoints sin autenticación
   BASE_API: {
-    baseURL: 'http://localhost:3001',
+    baseURL:  process.env.NEXT_PUBLIC_FORO_API_URL || 'http://localhost:3001',
     endpoints: {
       users: '/auth/users',
       user: (id: string) => `/auth/user/${id}`,
