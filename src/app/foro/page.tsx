@@ -16,6 +16,15 @@ import {
   ChatBubbleLeftIcon,
 } from '@heroicons/react/24/outline';
 
+// Función para generar un ObjectId válido de MongoDB
+function generateObjectId(): string {
+  const timestamp = Math.floor(Date.now() / 1000).toString(16);
+  const randomBytes = Array.from({ length: 16 }, () => 
+    Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
+  ).join('');
+  return timestamp + randomBytes;
+}
+
 export default function ForoPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,24 +52,10 @@ export default function ForoPage() {
       };
       
       const response = await ForoService.getPosts();
-      // Si response tiene la forma { data, pagination }, úsala; si es un array, úsalo directamente
-      let postsData: Post[] = [];
-      let totalPagesValue = 1;
-
-      if (Array.isArray(response)) {
-        postsData = response;
-        totalPagesValue = 1;
-        // Corregido: Añadimos comprobación de tipos para evitar errores de TypeScript
-      } else if (
-        response &&
-        typeof response === 'object' &&
-        'data' in response &&
-        Array.isArray((response as { data: unknown }).data)
-      ) {
-        const respObj = response as { data: Post[]; pagination?: { totalPages?: number } };
-        postsData = respObj.data || [];
-        totalPagesValue = respObj.pagination?.totalPages || 1;
-      }
+      
+      // Manejar la nueva estructura de respuesta
+      const postsData = response.posts || [];
+      const totalPagesValue = response.pagination?.totalPages || 1;
 
       setPosts(postsData);
       setTotalPages(totalPagesValue);
@@ -80,8 +75,7 @@ export default function ForoPage() {
     try {
       setLoading(true);
       const response = await ForoService.searchPosts(searchTerm);
-      // Por ahora usamos datos mock hasta que el servicio esté implementado
-      setPosts(response as Post[]);
+      setPosts(response.posts || []);
     } catch (error) {
       console.error('Error searching posts:', error);
     } finally {
@@ -91,7 +85,7 @@ export default function ForoPage() {
 
   const createPost = async (postData: CreatePostForm) => {
     try {
-      const newPost = await ForoService.createPost(postData as any);
+      const newPost = await ForoService.createPost(postData);
       setPosts(prev => [newPost, ...prev]);
       setShowCreateModal(false);
     } catch (error) {
@@ -444,7 +438,7 @@ function CreatePostModal({ onClose, onSubmit }: { onClose: () => void; onSubmit:
   const [formData, setFormData] = useState<CreatePostForm>({
     title: '',
     body: '',
-    authors: [{ id: '1', name: 'Admin', email: 'admin@example.com' }],
+    authors: [{ id: generateObjectId(), name: 'Admin', email: 'admin@example.com' }],
     tags: [],
     images: [],
   });

@@ -1,8 +1,21 @@
 // Configuración de las APIs de los microservicios
 export const API_CONFIG = {
+  // API Base para endpoints sin autenticación
+  BASE_API: {
+    baseURL: process.env.NEXT_PUBLIC_FORO_API_URL || 'http://localhost:3000',
+    endpoints: {
+      users: '/auth/users',
+      user: (id: string) => `/auth/users/${id}`,
+      usersByType: (type: string) => `/auth/users/type/${type}`,
+      tutors: '/auth/tutors',
+      codes: '/auth/codes',
+      send: '/auth/send',
+    }
+  },
+  
   // Servicio de citas
   APPOINTMENT_SERVICE: {
-    baseURL: process.env.NEXT_PUBLIC_APPOINTMENT_API_URL || 'http://localhost:3001',
+    baseURL: process.env.NEXT_PUBLIC_FORO_API_URL || 'http://localhost:3001',
     endpoints: {
       appointments: '/appointments',
       appointment: (id: string) => `/appointments/${id}`,
@@ -39,6 +52,11 @@ export const API_CONFIG = {
       conversationMessages: (conversationId: string) => `/s3/conversations/${conversationId}/messages`,
       conversationStatus: '/s3/conversations/status',
       wsInfo: '/s3/ws-info',
+      // Endpoints administrativos
+      adminConversations: '/s3/admin/conversations',
+      adminMessages: '/s3/admin/messages',
+      adminAttempts: '/s3/admin/attempts',
+      adminStatus: '/s3/admin/status',
     }
   },
   

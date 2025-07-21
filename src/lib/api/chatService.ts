@@ -216,4 +216,77 @@ export class ChatService {
       throw error;
     }
   }
+
+  // ============================================================================
+  // MÉTODOS ADMINISTRATIVOS - TODOS LOS USUARIOS
+  // ============================================================================
+
+  /**
+   * Obtener todas las conversaciones de todos los usuarios
+   */
+  static async getAllConversations(page: number = 1, limit: number = 20): Promise<{ conversations: Conversation[]; pagination: any }> {
+    try {
+      const response = await chatApi.get(
+        API_CONFIG.CHAT_SERVICE.endpoints.adminConversations,
+        { params: { page, limit } }
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error fetching all conversations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener todos los mensajes de chat de todos los usuarios
+   */
+  static async getAllMessages(page: number = 1, limit: number = 20): Promise<{ messages: ChatMessage[]; pagination: any }> {
+    try {
+      const response = await chatApi.get(
+        API_CONFIG.CHAT_SERVICE.endpoints.adminMessages,
+        { params: { page, limit } }
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error fetching all messages:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener todos los intentos de chat de todos los usuarios
+   */
+  static async getAllAttempts(page: number = 1, limit: number = 20): Promise<{ attempts: ChatAttempt[]; pagination: any }> {
+    try {
+      const response = await chatApi.get(
+        API_CONFIG.CHAT_SERVICE.endpoints.adminAttempts,
+        { params: { page, limit } }
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error fetching all attempts:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener estado del servicio administrativo
+   */
+  static async getAdminStatus(): Promise<{
+    service: string;
+    timestamp: string;
+    features: string[];
+    limits: {
+      maxItemsPerPage: number;
+      maxPages: number;
+    };
+  }> {
+    try {
+      const response = await chatApi.get(API_CONFIG.CHAT_SERVICE.endpoints.adminStatus);
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error fetching admin status:', error);
+      throw error;
+    }
+  }
 } 

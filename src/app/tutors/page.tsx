@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import { User } from '@/types';
+import { TutorService } from '@/lib/api/tutorService';
 import {
   UserGroupIcon,
   PlusIcon,
@@ -13,52 +14,28 @@ import {
   XCircleIcon,
   MagnifyingGlassIcon,
   KeyIcon,
+  ExclamationTriangleIcon,
+  CheckIcon,
 } from '@heroicons/react/24/outline';
 
 export default function TutorsPage() {
   const [tutors, setTutors] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedTutor, setSelectedTutor] = useState<User | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCodeModal, setShowCodeModal] = useState(false);
+  const [showBulkCodeModal, setShowBulkCodeModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-
-  // Mock data para tutores
-  const mockTutors: User[] = [
-    {
-      id: '1',
-      nombre: 'Juan Pérez',
-      correo: 'juan@example.com',
-      tipo_usuario: 'tutor',
-      codigo_institucion: 'TUTOR',
-      is_active: true,
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-      last_login: '2024-01-15T10:30:00Z',
-    },
-    {
-      id: '2',
-      nombre: 'María García',
-      correo: 'maria@example.com',
-      tipo_usuario: 'tutor',
-      codigo_institucion: 'TUTOR',
-      is_active: true,
-      created_at: '2024-01-02T00:00:00Z',
-      updated_at: '2024-01-02T00:00:00Z',
-      last_login: '2024-01-14T15:20:00Z',
-    },
-    {
-      id: '3',
-      nombre: 'Carlos López',
-      correo: 'carlos@example.com',
-      tipo_usuario: 'tutor',
-      codigo_institucion: 'TUTOR',
-      is_active: false,
-      created_at: '2024-01-03T00:00:00Z',
-      updated_at: '2024-01-03T00:00:00Z',
-    },
-  ];
+  const [codeGenerationStatus, setCodeGenerationStatus] = useState<{
+    loading: boolean;
+    success: boolean;
+    message: string;
+    codes?: Array<{ email: string; code: string }>;
+    sent?: string[];
+    failed?: string[];
+  } | null>(null);
 
   useEffect(() => {
     loadTutors();
@@ -66,16 +43,20 @@ export default function TutorsPage() {
 
   const loadTutors = async () => {
     try {
-      // Aquí se cargarían los tutores de la API
-      setTutors(mockTutors);
-    } catch (error) {
+      setLoading(true);
+      setError(null);
+      const tutorsData = await TutorService.getAllTutors();
+      setTutors(tutorsData);
+    } catch (error: any) {
       console.error('Error loading tutors:', error);
+      setError(error.message || 'Error al cargar tutores');
+      setTutors([]); // Asegurar que tutors sea un array vacío en caso de error
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredTutors = tutors.filter(tutor => {
+  const filteredTutors = (tutors || []).filter(tutor => {
     const matchesSearch = tutor.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          tutor.correo.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || 
@@ -105,13 +86,37 @@ export default function TutorsPage() {
   };
 
   const generateCode = async (tutorId: string) => {
+    if (!selectedTutor) return;
+    
     try {
-      // Aquí se generaría el código en la API
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-      alert(`Código generado para el tutor: ${code}`);
-      setShowCodeModal(false);
-    } catch (error) {
+      setCodeGenerationStatus({
+        loading: true,
+        success: false,
+        message: 'Generando código...',
+      });
+      
+      const result = await TutorService.createAndSendTutorCodes([selectedTutor.correo]);
+      
+      setCodeGenerationStatus({
+        loading: false,
+        success: true,
+        message: `Código generado y enviado exitosamente a ${selectedTutor.correo}`,
+        codes: result.codes,
+        sent: result.sent,
+        failed: result.failed,
+      });
+      
+      setTimeout(() => {
+        setShowCodeModal(false);
+        setCodeGenerationStatus(null);
+      }, 3000);
+    } catch (error: any) {
       console.error('Error generating code:', error);
+      setCodeGenerationStatus({
+        loading: false,
+        success: false,
+        message: error.message || 'Error al generar código',
+      });
     }
   };
 
@@ -149,6 +154,26 @@ export default function TutorsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar tutores</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={loadTutors}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -160,13 +185,22 @@ export default function TutorsPage() {
               Administra tutores y genera códigos de acceso
             </p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Nuevo Tutor
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowBulkCodeModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <KeyIcon className="h-4 w-4 mr-2" />
+              Generar Códigos Masivos
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+            >
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Nuevo Tutor
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -354,18 +388,54 @@ export default function TutorsPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   ¿Estás seguro de que quieres generar un nuevo código de acceso para {selectedTutor.nombre}?
                 </p>
+                
+                {codeGenerationStatus && (
+                  <div className={`p-3 rounded-md mb-4 ${
+                    codeGenerationStatus.success 
+                      ? 'bg-green-50 border border-green-200' 
+                      : codeGenerationStatus.loading
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'bg-red-50 border border-red-200'
+                  }`}>
+                    <div className="flex items-center">
+                      {codeGenerationStatus.loading && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                      )}
+                      {codeGenerationStatus.success && (
+                        <CheckIcon className="h-4 w-4 text-green-500 mr-2" />
+                      )}
+                      {!codeGenerationStatus.success && !codeGenerationStatus.loading && (
+                        <ExclamationTriangleIcon className="h-4 w-4 text-red-500 mr-2" />
+                      )}
+                      <span className={`text-sm ${
+                        codeGenerationStatus.success 
+                          ? 'text-green-800' 
+                          : codeGenerationStatus.loading
+                          ? 'text-blue-800'
+                          : 'text-red-800'
+                      }`}>
+                        {codeGenerationStatus.message}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex justify-end space-x-3">
                   <button
-                    onClick={() => setShowCodeModal(false)}
+                    onClick={() => {
+                      setShowCodeModal(false);
+                      setCodeGenerationStatus(null);
+                    }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={() => generateCode(selectedTutor.id)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md"
+                    disabled={codeGenerationStatus?.loading}
+                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Generar Código
+                    {codeGenerationStatus?.loading ? 'Generando...' : 'Generar Código'}
                   </button>
                 </div>
               </div>
@@ -378,6 +448,44 @@ export default function TutorsPage() {
           <CreateTutorModal
             onClose={() => setShowCreateModal(false)}
             onSubmit={createTutor}
+          />
+        )}
+
+        {/* Bulk Code Generation Modal */}
+        {showBulkCodeModal && (
+          <BulkCodeGenerationModal
+            onClose={() => setShowBulkCodeModal(false)}
+            onSubmit={async (emails) => {
+              try {
+                setCodeGenerationStatus({
+                  loading: true,
+                  success: false,
+                  message: 'Generando códigos...',
+                });
+                
+                const result = await TutorService.createAndSendTutorCodes(emails);
+                
+                setCodeGenerationStatus({
+                  loading: false,
+                  success: true,
+                  message: `Códigos generados y enviados exitosamente. ${result.sent.length} enviados, ${result.failed.length} fallidos.`,
+                  codes: result.codes,
+                  sent: result.sent,
+                  failed: result.failed,
+                });
+                
+                setTimeout(() => {
+                  setShowBulkCodeModal(false);
+                  setCodeGenerationStatus(null);
+                }, 5000);
+              } catch (error: any) {
+                setCodeGenerationStatus({
+                  loading: false,
+                  success: false,
+                  message: error.message || 'Error al generar códigos',
+                });
+              }
+            }}
           />
         )}
       </div>
@@ -447,6 +555,109 @@ function CreateTutorModal({ onClose, onSubmit }: { onClose: () => void; onSubmit
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
               >
                 Crear Tutor
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Componente para generar códigos masivos
+function BulkCodeGenerationModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (emails: string[]) => void }) {
+  const [emails, setEmails] = useState('');
+  const [validation, setValidation] = useState<{ valid: string[]; invalid: string[] }>({ valid: [], invalid: [] });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailList = emails.split('\n').map(email => email.trim()).filter(email => email);
+    const { valid } = TutorService.validateEmails(emailList);
+    
+    if (valid.length === 0) {
+      alert('Por favor ingresa al menos un email válido');
+      return;
+    }
+    
+    onSubmit(valid);
+  };
+
+  const handleEmailsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const emailList = e.target.value.split('\n').map(email => email.trim()).filter(email => email);
+    const validationResult = TutorService.validateEmails(emailList);
+    setValidation(validationResult);
+    setEmails(e.target.value);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-20 mx-auto p-5 border w-[600px] shadow-lg rounded-md bg-white">
+        <div className="mt-3">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Generar Códigos Masivos</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Emails de Tutores (uno por línea)
+              </label>
+              <textarea
+                required
+                value={emails}
+                onChange={handleEmailsChange}
+                placeholder="tutor1@example.com&#10;tutor2@example.com&#10;tutor3@example.com"
+                rows={8}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Ingresa un email por línea. Se validarán automáticamente.
+              </p>
+            </div>
+            
+            {validation.valid.length > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                <h4 className="text-sm font-medium text-green-800 mb-2">
+                  Emails válidos ({validation.valid.length}):
+                </h4>
+                <div className="text-xs text-green-700 space-y-1">
+                  {validation.valid.map((email, index) => (
+                    <div key={index} className="flex items-center">
+                      <CheckIcon className="h-3 w-3 mr-1" />
+                      {email}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {validation.invalid.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <h4 className="text-sm font-medium text-red-800 mb-2">
+                  Emails inválidos ({validation.invalid.length}):
+                </h4>
+                <div className="text-xs text-red-700 space-y-1">
+                  {validation.invalid.map((email, index) => (
+                    <div key={index} className="flex items-center">
+                      <ExclamationTriangleIcon className="h-3 w-3 mr-1" />
+                      {email}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={validation.valid.length === 0}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Generar y Enviar Códigos ({validation.valid.length})
               </button>
             </div>
           </form>

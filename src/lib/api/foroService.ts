@@ -9,13 +9,26 @@ const foroApi = axios.create({
 
 export class ForoService {
   // Obtener todas las publicaciones
-  static async getPosts(token?: string): Promise<Post[]> {
+  static async getPosts(token?: string): Promise<{ posts: Post[]; pagination: any }> {
     try {
       const response = await foroApi.get(
         API_CONFIG.FORO_SERVICE.endpoints.posts,
         { headers: createAuthHeaders(token) }
       );
-      return response.data.data || response.data;
+      
+      // Manejar la estructura de respuesta del backend
+      if (response.data.success && response.data.data) {
+        return {
+          posts: response.data.data.posts || [],
+          pagination: response.data.data.pagination || {}
+        };
+      }
+      
+      // Fallback para estructura anterior
+      return {
+        posts: response.data.data || response.data || [],
+        pagination: {}
+      };
     } catch (error) {
       console.error('Error fetching posts:', error);
       throw error;
@@ -39,20 +52,23 @@ export class ForoService {
   // Crear nueva publicación
   static async createPost(postData: {
     title: string;
-    content: string;
-    author: {
+    body: string;
+    authors: {
       id: string;
       name: string;
       email: string;
-    };
-    tags: string[];
+    }[];
+    tags: {
+      value: string;
+      color: string;
+    }[];
     images?: File[];
   }, token?: string): Promise<Post> {
     try {
       const formData = new FormData();
       formData.append('title', postData.title);
-      formData.append('content', postData.content);
-      formData.append('author', JSON.stringify(postData.author));
+      formData.append('body', postData.body);
+      formData.append('authors', JSON.stringify(postData.authors));
       formData.append('tags', JSON.stringify(postData.tags));
       
       if (postData.images) {
@@ -107,16 +123,29 @@ export class ForoService {
   }
 
   // Buscar publicaciones
-  static async searchPosts(query: string, token?: string): Promise<Post[]> {
+  static async searchPosts(query: string, token?: string): Promise<{ posts: Post[]; pagination: any }> {
     try {
       const response = await foroApi.get(
         API_CONFIG.FORO_SERVICE.endpoints.search,
         { 
-          params: { q: query },
+          params: { query: query },
           headers: createAuthHeaders(token) 
         }
       );
-      return response.data.data || response.data;
+      
+      // Manejar la estructura de respuesta del backend
+      if (response.data.success && response.data.data) {
+        return {
+          posts: response.data.data.posts || [],
+          pagination: response.data.data.pagination || {}
+        };
+      }
+      
+      // Fallback para estructura anterior
+      return {
+        posts: response.data.data || response.data || [],
+        pagination: {}
+      };
     } catch (error) {
       console.error('Error searching posts:', error);
       throw error;
@@ -131,14 +160,15 @@ export class ForoService {
     recentPosts: number;
   }> {
     try {
-      const posts = await this.getPosts(token);
+      const response = await this.getPosts(token);
+      const posts = response.posts;
       const now = new Date();
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
       const stats = {
         totalPosts: posts.length,
-        totalLikes: posts.reduce((sum, post) => sum + post.likes, 0),
-        totalComments: posts.reduce((sum, post) => sum + post.comments, 0),
+        totalLikes: posts.reduce((sum, post) => sum + (post.likes || 0), 0),
+        totalComments: posts.reduce((sum, post) => sum + (post.comments || 0), 0),
         recentPosts: posts.filter(post => 
           new Date(post.created_at) > oneWeekAgo
         ).length,

@@ -13,6 +13,7 @@ import {
   EyeIcon,
   MagnifyingGlassIcon,
   PlusIcon,
+  ChartBarIcon,
 } from '@heroicons/react/24/outline';
 
 const messageStatusColors = {
@@ -30,49 +31,39 @@ const messageStatusIcons = {
 };
 
 export default function ChatsPage() {
-  const [activeTab, setActiveTab] = useState<'history' | 'conversations' | 'attempts' | 'ai'>('history');
+  const [activeTab, setActiveTab] = useState<'conversations' | 'messages' | 'attempts' | 'ai'>('conversations');
   const [loading, setLoading] = useState(true);
-  const [selectedStudent, setSelectedStudent] = useState<string>('');
-  const [selectedConversation, setSelectedConversation] = useState<string>('');
-  const [chatHistory, setChatHistory] = useState<{ messages: ChatMessage[]; attempts: ChatAttempt[]; pagination: any }>({ messages: [], attempts: [], pagination: {} });
-  const [conversations, setConversations] = useState<{ conversations: Conversation[]; pagination: any }>({ conversations: [], pagination: {} });
-  const [conversationMessages, setConversationMessages] = useState<{ messages: ChatMessage[]; pagination: any }>({ messages: [], pagination: {} });
-  const [chatAttempts, setChatAttempts] = useState<ChatAttempt[]>([]);
+  const [allConversations, setAllConversations] = useState<{ conversations: Conversation[]; pagination: any }>({ conversations: [], pagination: {} });
+  const [allMessages, setAllMessages] = useState<{ messages: ChatMessage[]; pagination: any }>({ messages: [], pagination: {} });
+  const [allAttempts, setAllAttempts] = useState<{ attempts: ChatAttempt[]; pagination: any }>({ attempts: [], pagination: {} });
   const [aiInfo, setAiInfo] = useState<any>(null);
   const [aiTestMessage, setAiTestMessage] = useState('');
   const [aiTestResult, setAiTestResult] = useState<any>(null);
-  const [serviceStatus, setServiceStatus] = useState<any>(null);
-
-  // Mock data para estudiantes (en un caso real vendría de la API de usuarios)
-  const mockStudents = [
-    { id: 'estudiante1', name: 'Juan Pérez' },
-    { id: 'estudiante2', name: 'María García' },
-    { id: 'estudiante3', name: 'Carlos López' },
-  ];
+  const [adminStatus, setAdminStatus] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
-    loadServiceStatus();
+    loadAdminStatus();
     loadAIInfo();
   }, []);
 
   useEffect(() => {
-    if (selectedStudent && activeTab === 'history') {
-      loadChatHistory();
+    if (activeTab === 'conversations') {
+      loadAllConversations();
+    } else if (activeTab === 'messages') {
+      loadAllMessages();
+    } else if (activeTab === 'attempts') {
+      loadAllAttempts();
     }
-  }, [selectedStudent, activeTab]);
+  }, [activeTab, currentPage, pageSize]);
 
-  useEffect(() => {
-    if (selectedConversation && activeTab === 'conversations') {
-      loadConversationMessages();
-    }
-  }, [selectedConversation, activeTab]);
-
-  const loadServiceStatus = async () => {
+  const loadAdminStatus = async () => {
     try {
-      const status = await ChatService.getChatStatus();
-      setServiceStatus(status);
+      const status = await ChatService.getAdminStatus();
+      setAdminStatus(status);
     } catch (error) {
-      console.error('Error loading service status:', error);
+      console.error('Error loading admin status:', error);
     }
   };
 
@@ -85,43 +76,37 @@ export default function ChatsPage() {
     }
   };
 
-  const loadChatHistory = async () => {
-    if (!selectedStudent) return;
-    
+  const loadAllConversations = async () => {
     setLoading(true);
     try {
-      const history = await ChatService.getChatHistory(selectedStudent);
-      setChatHistory(history);
+      const conversations = await ChatService.getAllConversations(currentPage, pageSize);
+      setAllConversations(conversations);
     } catch (error) {
-      console.error('Error loading chat history:', error);
+      console.error('Error loading all conversations:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadConversationMessages = async () => {
-    if (!selectedConversation) return;
-    
+  const loadAllMessages = async () => {
     setLoading(true);
     try {
-      const messages = await ChatService.getConversationMessages(selectedConversation, 'admin');
-      setConversationMessages(messages);
+      const messages = await ChatService.getAllMessages(currentPage, pageSize);
+      setAllMessages(messages);
     } catch (error) {
-      console.error('Error loading conversation messages:', error);
+      console.error('Error loading all messages:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadChatAttempts = async () => {
-    if (!selectedStudent) return;
-    
+  const loadAllAttempts = async () => {
     setLoading(true);
     try {
-      const attempts = await ChatService.getChatAttempts(selectedStudent);
-      setChatAttempts(attempts);
+      const attempts = await ChatService.getAllAttempts(currentPage, pageSize);
+      setAllAttempts(attempts);
     } catch (error) {
-      console.error('Error loading chat attempts:', error);
+      console.error('Error loading all attempts:', error);
     } finally {
       setLoading(false);
     }
@@ -138,32 +123,11 @@ export default function ChatsPage() {
     }
   };
 
-  const sendTestMessage = async () => {
-    if (!selectedStudent || !aiTestMessage.trim()) return;
-    
-    try {
-      const result = await ChatService.sendMessage({
-        mensaje: aiTestMessage,
-        usuario_id: 'admin',
-        estudiante_id: selectedStudent,
-      });
-      setAiTestMessage('');
-      loadChatHistory(); // Recargar historial
-    } catch (error) {
-      console.error('Error sending test message:', error);
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('es-ES');
   };
 
-  const getStudentName = (studentId: string) => {
-    const student = mockStudents.find(s => s.id === studentId);
-    return student ? student.name : studentId;
-  };
-
-  if (loading && !serviceStatus) {
+  if (loading && !adminStatus) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-64">
@@ -178,28 +142,32 @@ export default function ChatsPage() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestión de Chat</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Panel Administrativo de Chat</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Administra conversaciones, historial y configuración de IA
+            Administra todas las conversaciones, mensajes e intentos del sistema
           </p>
         </div>
 
-        {/* Service Status */}
-        {serviceStatus && (
+        {/* Admin Status */}
+        {adminStatus && (
           <div className="bg-white shadow rounded-lg p-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Estado del Servicio</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${serviceStatus.ai?.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-sm">IA: {serviceStatus.ai?.status}</span>
-              </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Estado del Servicio Administrativo</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="text-sm">Base de datos: {serviceStatus.database?.status}</span>
+                <span className="text-sm">Servicio: {adminStatus.service}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                <span className="text-sm">WebSocket: {serviceStatus.websockets?.status}</span>
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span className="text-sm">Máx. por página: {adminStatus.limits?.maxItemsPerPage}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                <span className="text-sm">Máx. páginas: {adminStatus.limits?.maxPages}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <span className="text-sm">Timestamp: {new Date(adminStatus.timestamp).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -210,9 +178,9 @@ export default function ChatsPage() {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8 px-6">
               {[
-                { id: 'history', name: 'Historial de Chat', icon: ChatBubbleLeftRightIcon },
-                { id: 'conversations', name: 'Conversaciones', icon: UserIcon },
-                { id: 'attempts', name: 'Intentos', icon: ClockIcon },
+                { id: 'conversations', name: 'Todas las Conversaciones', icon: UserIcon },
+                { id: 'messages', name: 'Todos los Mensajes', icon: ChatBubbleLeftRightIcon },
+                { id: 'attempts', name: 'Todos los Intentos', icon: ClockIcon },
                 { id: 'ai', name: 'Configuración IA', icon: MagnifyingGlassIcon },
               ].map((tab) => (
                 <button
@@ -232,178 +200,204 @@ export default function ChatsPage() {
           </div>
 
           <div className="p-6">
-            {/* Historial de Chat */}
-            {activeTab === 'history' && (
+            {/* Todas las Conversaciones */}
+            {activeTab === 'conversations' && (
               <div className="space-y-4">
-                <div className="flex space-x-4">
-                  <select
-                    value={selectedStudent}
-                    onChange={(e) => setSelectedStudent(e.target.value)}
-                    className="block w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                  >
-                    <option value="">Seleccionar estudiante</option>
-                    {mockStudents.map((student) => (
-                      <option key={student.id} value={student.id}>
-                        {student.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={sendTestMessage}
-                    disabled={!selectedStudent || !aiTestMessage.trim()}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-2" />
-                    Enviar Mensaje de Prueba
-                  </button>
+                <div className="flex justify-between items-center">
+                  <h4 className="text-lg font-medium text-gray-900">Todas las Conversaciones</h4>
+                  <div className="flex space-x-2">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      className="block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    >
+                      <option value={10}>10 por página</option>
+                      <option value={20}>20 por página</option>
+                      <option value={50}>50 por página</option>
+                      <option value={100}>100 por página</option>
+                    </select>
+                  </div>
                 </div>
 
-                {selectedStudent && (
-                  <div className="space-y-4">
-                    <div className="flex space-x-4">
-                      <input
-                        type="text"
-                        value={aiTestMessage}
-                        onChange={(e) => setAiTestMessage(e.target.value)}
-                        placeholder="Escribe un mensaje de prueba..."
-                        className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      />
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-                      <h4 className="font-medium text-gray-900 mb-4">
-                        Historial de {getStudentName(selectedStudent)}
-                      </h4>
-                      {chatHistory.messages.map((message) => {
-                        const StatusIcon = messageStatusIcons[message.estado];
-                        return (
-                          <div key={message.id} className="mb-4 p-3 bg-white rounded-lg shadow-sm">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="text-sm font-medium text-gray-900">
-                                {message.is_ai_response ? 'IA' : 'Usuario'}
-                              </span>
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${messageStatusColors[message.estado]}`}>
-                                <StatusIcon className="h-3 w-3 mr-1" />
-                                {message.estado}
-                              </span>
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : (
+                  <div className="bg-white shadow overflow-hidden sm:rounded-md">
+                    <ul className="divide-y divide-gray-200">
+                      {allConversations.conversations.map((conversation) => (
+                        <li key={conversation.id} className="px-6 py-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {conversation.participant1_id} ↔ {conversation.participant2_id}
+                                </p>
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  conversation.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {conversation.is_active ? 'Activa' : 'Inactiva'}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-500">
+                                {conversation.message_count} mensajes • Creada: {formatDate(conversation.created_at)}
+                              </p>
+                              {conversation.last_message && (
+                                <p className="text-xs text-gray-600 mt-1 truncate">
+                                  Último mensaje: {conversation.last_message}
+                                </p>
+                              )}
                             </div>
-                            <p className="text-sm text-gray-700">{message.mensaje}</p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              {formatDate(message.fecha)}
-                            </p>
                           </div>
-                        );
-                      })}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Paginación */}
+                {allConversations.pagination && (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-700">
+                      Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, allConversations.pagination.total)} de {allConversations.pagination.total} resultados
+                    </p>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50"
+                      >
+                        Anterior
+                      </button>
+                      <span className="px-3 py-1 text-sm text-gray-700">
+                        Página {currentPage} de {allConversations.pagination.totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(Math.min(allConversations.pagination.totalPages, currentPage + 1))}
+                        disabled={currentPage === allConversations.pagination.totalPages}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50"
+                      >
+                        Siguiente
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Conversaciones */}
-            {activeTab === 'conversations' && (
+            {/* Todos los Mensajes */}
+            {activeTab === 'messages' && (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-4">Conversaciones</h4>
-                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                      {conversations.conversations.map((conversation) => (
-                        <div
-                          key={conversation.id}
-                          onClick={() => setSelectedConversation(conversation.id)}
-                          className={`p-3 rounded-lg cursor-pointer ${
-                            selectedConversation === conversation.id
-                              ? 'bg-blue-50 border border-blue-200'
-                              : 'bg-gray-50 hover:bg-gray-100'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-lg font-medium text-gray-900">Todos los Mensajes</h4>
+                  <div className="flex space-x-2">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      className="block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    >
+                      <option value={10}>10 por página</option>
+                      <option value={20}>20 por página</option>
+                      <option value={50}>50 por página</option>
+                      <option value={100}>100 por página</option>
+                    </select>
+                  </div>
+                </div>
+
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {allMessages.messages.map((message) => {
+                      const StatusIcon = messageStatusIcons[message.estado];
+                      return (
+                        <div key={message.id} className="bg-white shadow rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-2">
                             <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {conversation.participant1_id} ↔ {conversation.participant2_id}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {conversation.message_count} mensajes
-                              </p>
+                              <span className="text-sm font-medium text-gray-900">
+                                {message.is_ai_response ? 'IA' : `Usuario: ${message.usuario_id}`}
+                              </span>
                             </div>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              conversation.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {conversation.is_active ? 'Activa' : 'Inactiva'}
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${messageStatusColors[message.estado]}`}>
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {message.estado}
                             </span>
                           </div>
-                          {conversation.last_message && (
-                            <p className="text-xs text-gray-600 mt-2 truncate">
-                              {conversation.last_message}
-                            </p>
-                          )}
+                          <p className="text-sm text-gray-700 mb-2">{message.mensaje}</p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(message.fecha)}
+                          </p>
                         </div>
-                      ))}
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Paginación */}
+                {allMessages.pagination && (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-700">
+                      Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, allMessages.pagination.total)} de {allMessages.pagination.total} resultados
+                    </p>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50"
+                      >
+                        Anterior
+                      </button>
+                      <span className="px-3 py-1 text-sm text-gray-700">
+                        Página {currentPage} de {allMessages.pagination.totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(Math.min(allMessages.pagination.totalPages, currentPage + 1))}
+                        disabled={currentPage === allMessages.pagination.totalPages}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50"
+                      >
+                        Siguiente
+                      </button>
                     </div>
                   </div>
-
-                  {selectedConversation && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-4">Mensajes de la Conversación</h4>
-                      <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-                        {conversationMessages.messages.map((message) => (
-                          <div key={message.id} className="mb-3 p-3 bg-white rounded-lg shadow-sm">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="text-sm font-medium text-gray-900">
-                                {message.usuario_id}
-                              </span>
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${messageStatusColors[message.estado]}`}>
-                                {message.estado}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-700">{message.mensaje}</p>
-                            <p className="text-xs text-gray-500 mt-2">
-                              {formatDate(message.fecha)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             )}
 
-            {/* Intentos de Chat */}
+            {/* Todos los Intentos */}
             {activeTab === 'attempts' && (
               <div className="space-y-4">
-                <div className="flex space-x-4">
-                  <select
-                    value={selectedStudent}
-                    onChange={(e) => setSelectedStudent(e.target.value)}
-                    className="block w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                  >
-                    <option value="">Seleccionar estudiante</option>
-                    {mockStudents.map((student) => (
-                      <option key={student.id} value={student.id}>
-                        {student.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={loadChatAttempts}
-                    disabled={!selectedStudent}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    <EyeIcon className="h-4 w-4 mr-2" />
-                    Ver Intentos
-                  </button>
+                <div className="flex justify-between items-center">
+                  <h4 className="text-lg font-medium text-gray-900">Todos los Intentos de Chat</h4>
+                  <div className="flex space-x-2">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      className="block pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                    >
+                      <option value={10}>10 por página</option>
+                      <option value={20}>20 por página</option>
+                      <option value={50}>50 por página</option>
+                      <option value={100}>100 por página</option>
+                    </select>
+                  </div>
                 </div>
 
-                {selectedStudent && chatAttempts.length > 0 && (
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : (
                   <div className="bg-white shadow overflow-hidden sm:rounded-md">
                     <ul className="divide-y divide-gray-200">
-                      {chatAttempts.map((attempt) => (
+                      {allAttempts.attempts.map((attempt) => (
                         <li key={attempt.id} className="px-6 py-4">
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm font-medium text-gray-900">
-                                {getStudentName(attempt.estudiante_id)}
+                                Estudiante: {attempt.estudiante_id}
                               </p>
                               <p className="text-sm text-gray-500">
                                 Intento registrado
@@ -416,6 +410,34 @@ export default function ChatsPage() {
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {/* Paginación */}
+                {allAttempts.pagination && (
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-700">
+                      Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, allAttempts.pagination.total)} de {allAttempts.pagination.total} resultados
+                    </p>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50"
+                      >
+                        Anterior
+                      </button>
+                      <span className="px-3 py-1 text-sm text-gray-700">
+                        Página {currentPage} de {allAttempts.pagination.totalPages}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(Math.min(allAttempts.pagination.totalPages, currentPage + 1))}
+                        disabled={currentPage === allAttempts.pagination.totalPages}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50"
+                      >
+                        Siguiente
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
