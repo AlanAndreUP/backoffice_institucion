@@ -6,6 +6,7 @@ export const API_CONFIG = {
     endpoints: {
       users: '/auth/users',
       user: (id: string) => `/auth/user/${id}`,
+      users_s1: (id: string) => `/user/${id}`,
       usersByType: (type: string) => `/auth/user/`,
       tutors: '/auth/tutors',
       codes: '/auth/tutor-codes',
@@ -17,9 +18,9 @@ export const API_CONFIG = {
   APPOINTMENT_SERVICE: {
     baseURL: process.env.NEXT_PUBLIC_FORO_API_URL || 'http://localhost:3001',
     endpoints: {
-      appointments: '/appointments',
-      appointment: (id: string) => `/appointments/${id}`,
-      updateStatus: (id: string) => `/appointments/${id}/status`,
+      appointments: '/s1/appointments',
+      appointment: (id: string) => `/s1/appointments/${id}`,
+      updateStatus: (id: string) => `/s1/appointments/${id}/status`,
     }
   },
   

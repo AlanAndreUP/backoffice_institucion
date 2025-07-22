@@ -12,6 +12,9 @@ import {
   XCircleIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
+import { AppointmentService } from '@/lib/api/appointmentService';
+import { UserService } from '@/lib/api/userService';
+import { User } from '@/types';
 
 const statusColors = {
   pendiente: 'bg-yellow-100 text-yellow-800',
@@ -35,85 +38,105 @@ export default function AppointmentsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pagination, setPagination] = useState<any>(null);
+  const PAGE_SIZE = 10;
+  const [userMap, setUserMap] = useState<Record<string, User>>({});
 
   useEffect(() => {
     loadAppointments();
-  }, []);
+  }, [filter, currentPage]);
+
+  const getToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token') || undefined;
+    }
+    return undefined;
+  };
 
   const loadAppointments = async () => {
+    setLoading(true);
     try {
-      // Aquí se cargarían los datos reales de la API
-      const mockAppointments: Appointment[] = [
-        {
-          id: '1',
-          id_tutor: 'tutor1',
-          id_alumno: 'alumno1',
-          fecha_cita: '2024-01-15T14:00:00Z',
-          estado_cita: 'confirmada',
-          to_do: 'Clase de álgebra - Matemáticas',
-          tareas_completadas: [],
-          created_at: '2024-01-10T10:00:00Z',
-          updated_at: '2024-01-10T10:00:00Z',
-        },
-        {
-          id: '2',
-          id_tutor: 'tutor2',
-          id_alumno: 'alumno2',
-          fecha_cita: '2024-01-16T16:00:00Z',
-          estado_cita: 'pendiente',
-          to_do: 'Mecánica clásica - Física',
-          tareas_completadas: [],
-          created_at: '2024-01-11T09:00:00Z',
-          updated_at: '2024-01-11T09:00:00Z',
-        },
-        {
-          id: '3',
-          id_tutor: 'tutor1',
-          id_alumno: 'alumno3',
-          fecha_cita: '2024-01-14T10:00:00Z',
-          estado_cita: 'completada',
-          to_do: 'Reacciones químicas - Química',
-          tareas_completadas: ['Teoría básica', 'Ejercicios prácticos'],
-          created_at: '2024-01-09T14:00:00Z',
-          updated_at: '2024-01-14T10:00:00Z',
-        },
-      ];
-      setAppointments(mockAppointments);
+      const token = getToken();
+      const filters = filter !== 'all' ? { estado_cita: filter as Appointment['estado_cita'] } : {};
+      const params = { ...filters, page: currentPage, limit: PAGE_SIZE };
+      const result = await AppointmentService.getAppointments(params, token);
+      const citas = Array.isArray(result) ? result : result.data;
+      setAppointments(citas);
+      setPagination(result.pagination || null);
+      setTotalPages(result.pagination?.totalPages || 1);
+
+      const userIds = Array.from(new Set([
+        ...citas.map((c: any) => c.id_tutor),
+        ...citas.map((c: any) => c.id_alumno),
+      ]));
+      console.log('IDs de usuarios a buscar:', userIds);
+
+      const userResults = await Promise.all(
+        userIds.map(async (id) => {
+          try {
+            const user = await UserService.getUserById(id, token);
+            return [id, user];
+          } catch (e) {
+            console.log('No se encontró usuario para', id, e);
+            return [id, undefined];
+          }
+        })
+      );
+
+      const userDict: Record<string, User> = {};
+      userResults.forEach(([id, user]) => {
+        if (user) userDict[id] = user.user;
+      });
+      setUserMap(userDict);
     } catch (error) {
-      console.error('Error loading appointments:', error);
+      console.error('Error al cargar las citas:', error);
+      setAppointments([]);
+      setPagination(null);
+      setTotalPages(1);
+      setUserMap({});
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredAppointments = appointments.filter(appointment => {
-    if (filter === 'all') return true;
-    return appointment.estado_cita === filter;
-  });
-
   const updateAppointmentStatus = async (id: string, status: Appointment['estado_cita']) => {
     try {
-      // Aquí se actualizaría el estado en la API
-      setAppointments(prev => 
-        prev.map(app => 
+      const token = getToken();
+      await AppointmentService.updateAppointmentStatus(id, status, token);
+      setAppointments(prev =>
+        prev.map(app =>
           app.id === id ? { ...app, estado_cita: status, updated_at: new Date().toISOString() } : app
         )
       );
+      // Opcional: recargar toda la lista
+      // await loadAppointments();
     } catch (error) {
-      console.error('Error updating appointment status:', error);
+      console.error('Error al actualizar el estado de la cita:', error);
+      alert('No se pudo actualizar el estado de la cita.');
     }
   };
 
   const deleteAppointment = async (id: string) => {
     if (confirm('¿Estás seguro de que quieres eliminar esta cita?')) {
       try {
-        // Aquí se eliminaría de la API
+        const token = getToken();
+        await AppointmentService.deleteAppointment(id, token);
         setAppointments(prev => prev.filter(app => app.id !== id));
+        // Opcional: recargar toda la lista
+        // await loadAppointments();
       } catch (error) {
-        console.error('Error deleting appointment:', error);
+        console.error('Error al eliminar la cita:', error);
+        alert('No se pudo eliminar la cita.');
       }
     }
   };
+
+  // Cuando cambie el filtro, regresa a la página 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
   if (loading) {
     return (
@@ -221,57 +244,106 @@ export default function AppointmentsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAppointments.map((appointment) => {
-                  const StatusIcon = statusIcons[appointment.estado_cita];
-                  return (
-                    <tr key={appointment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        Estudiante {appointment.id_alumno}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        Tutor {appointment.id_tutor}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(appointment.fecha_cita).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(appointment.fecha_cita).toLocaleTimeString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {appointment.to_do}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[appointment.estado_cita]}`}>
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {appointment.estado_cita}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => setSelectedAppointment(appointment)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <EyeIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setSelectedAppointment(appointment)}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          <PencilIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteAppointment(appointment.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {(appointments || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-gray-500">
+                      No hay citas para mostrar.
+                    </td>
+                  </tr>
+                ) : (
+                  (appointments || []).map((appointment) => {
+                    const StatusIcon = statusIcons[appointment.estado_cita];
+                    const alumno = userMap[appointment.id_alumno];
+                    const tutor = userMap[appointment.id_tutor];
+                    return (
+                      <tr key={appointment.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {alumno ? `${alumno.nombre}${alumno.correo ? ' (' + alumno.correo + ')' : ''}` : `Estudiante ${appointment.id_alumno}`}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {tutor ? `${tutor.nombre}${tutor.correo ? ' (' + tutor.correo + ')' : ''}` : `Tutor ${appointment.id_tutor}`}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(appointment.fecha_cita).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(appointment.fecha_cita).toLocaleTimeString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {appointment.to_do}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[appointment.estado_cita]}`}>
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {appointment.estado_cita}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <button
+                            onClick={() => setSelectedAppointment(appointment)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setSelectedAppointment(appointment)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            <PencilIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteAppointment(appointment.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
+          {/* Paginación */}
+          {pagination && (
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between px-6 py-3 bg-gray-50 border-t space-y-2 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1 rounded-md text-sm font-medium ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                >
+                  Anterior
+                </button>
+                {/* Botones de página */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded-md text-sm font-medium ${
+                      page === currentPage
+                        ? 'bg-blue-600 text-white font-bold'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                    disabled={page === currentPage}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1 rounded-md text-sm font-medium ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                >
+                  Siguiente
+                </button>
+              </div>
+              <span className="text-sm text-gray-700">
+                Página {currentPage} de {totalPages}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Appointment Details Modal */}

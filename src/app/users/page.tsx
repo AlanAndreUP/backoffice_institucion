@@ -46,7 +46,7 @@ export default function UsersPage() {
     } catch (error: any) {
       console.error('Error loading users:', error);
       setError(error.message || 'Error al cargar usuarios');
-      setUsers([]); // Asegurar que users sea un array vacío en caso de error
+      setUsers([]); 
     } finally {
       setLoading(false);
     }

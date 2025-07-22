@@ -26,7 +26,7 @@ export class UserService {
   static async getUserById(id: string, token?: string): Promise<User> {
     try {
       const response = await userApi.get(
-        API_CONFIG.AUTH_SERVICE.endpoints.user(id),
+        API_CONFIG.BASE_API.endpoints.users_s1(id),
         { headers: createAuthHeaders(token) }
       );
       return response.data.data || response.data;
