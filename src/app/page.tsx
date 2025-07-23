@@ -19,8 +19,8 @@ import { TutorService } from '@/lib/api/tutorService';
 import { ForoService } from '@/lib/api/foroService';
 import { User } from '@/types';
 import { useRouter } from 'next/navigation';
-import { CreateTutorModal } from '@/app/tutors/page';
-import { CreatePostModal } from '@/app/foro/page';
+import { CreateTutorModal } from '@/components/tutors/CreateTutorModal';
+import { CreatePostModal } from '@/components/foro/CreatePostModal';
 
 // Componente de tarjeta de estadística
 function StatCard({ title, value, icon: Icon, color = 'blue' }: {
