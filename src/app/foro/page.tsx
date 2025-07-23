@@ -225,7 +225,7 @@ export default function ForoPage() {
               {post.images && post.images.length > 0 && (
                 <div className="aspect-w-16 aspect-h-9 bg-gray-200">
                   <img
-                    src={post.images[0].url as string}
+                    src={post.images[0].url}
                     alt={post.title}
                     className="w-full h-48 object-cover"
                   />
