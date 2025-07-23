@@ -225,7 +225,7 @@ export default function ForoPage() {
               {post.images && post.images.length > 0 && (
                 <div className="aspect-w-16 aspect-h-9 bg-gray-200">
                   <img
-                    src={post.images[0]}
+                    src={post.images[0].url as string}
                     alt={post.title}
                     className="w-full h-48 object-cover"
                   />
@@ -276,7 +276,7 @@ export default function ForoPage() {
 
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">
-                    {formatDate(post.created_at)}
+                    {formatDate(post.createdAt)}
                   </span>
                   <div className="flex space-x-2">
                     <button
@@ -342,7 +342,7 @@ export default function ForoPage() {
                 {selectedPost.images && selectedPost.images.length > 0 && (
                   <div className="mb-4">
                     <img
-                      src={selectedPost.images[0]}
+                      src={selectedPost.images[0].url}
                       alt={selectedPost.title}
                       className="w-full h-64 object-cover rounded-lg"
                     />
@@ -392,8 +392,8 @@ export default function ForoPage() {
                 )}
 
                 <div className="flex justify-between items-center text-sm text-gray-500">
-                  <span>Creado: {formatDate(selectedPost.created_at)}</span>
-                  <span>Actualizado: {formatDate(selectedPost.updated_at)}</span>
+                  <span>Creado: {formatDate(selectedPost.createdAt)}</span>
+                  <span>Actualizado: {formatDate(selectedPost.updatedAt)}</span>
                 </div>
 
                 <div className="mt-6 flex justify-end">
@@ -434,7 +434,7 @@ export default function ForoPage() {
 }
 
 // Componente para crear publicación
-function CreatePostModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (data: CreatePostForm) => void }) {
+export function CreatePostModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (data: CreatePostForm) => void }) {
   const [formData, setFormData] = useState<CreatePostForm>({
     title: '',
     body: '',
@@ -448,6 +448,15 @@ function CreatePostModal({ onClose, onSubmit }: { onClose: () => void; onSubmit:
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFormData(prev => ({
+        ...prev,
+        images: Array.from(e.target.files)
+      }));
+    }
   };
 
   const addTag = () => {
@@ -492,6 +501,25 @@ function CreatePostModal({ onClose, onSubmit }: { onClose: () => void; onSubmit:
                 onChange={(e) => setFormData({ ...formData, body: e.target.value })}
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Imágenes</label>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleFileChange}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+              {formData.images && formData.images.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {formData.images.map((file, idx) => (
+                    <span key={idx} className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                      {file.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Tags</label>

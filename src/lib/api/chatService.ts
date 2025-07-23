@@ -162,7 +162,7 @@ export class ChatService {
     try {
       const response = await chatApi.get(
         API_CONFIG.CHAT_SERVICE.endpoints.conversationMessages(conversationId),
-        { params: { usuario_id: usuarioId, page, limit } }
+        { params: { usuario_id: usuarioId, page, limit, analizar: true } }
       );
       return response.data.data || response.data;
     } catch (error) {

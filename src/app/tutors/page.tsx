@@ -494,7 +494,7 @@ export default function TutorsPage() {
 }
 
 // Componente para crear tutor
-function CreateTutorModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (data: any) => void }) {
+export function CreateTutorModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (data: any) => void }) {
   const [formData, setFormData] = useState({
     nombre: '',
     correo: '',

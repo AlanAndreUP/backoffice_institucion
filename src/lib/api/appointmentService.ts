@@ -18,7 +18,7 @@ export class AppointmentService {
           headers: createAuthHeaders(token) 
         }
       );
-      return response.data.data || response.data;
+      return response.data; // <-- Ahora siempre retorna el objeto completo
     } catch (error) {
       console.error('Error fetching appointments:', error);
       throw error;

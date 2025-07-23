@@ -39,7 +39,6 @@ export default function AppointmentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [pagination, setPagination] = useState<any>(null);
   const PAGE_SIZE = 10;
   const [userMap, setUserMap] = useState<Record<string, User>>({});
@@ -62,14 +61,12 @@ export default function AppointmentsPage() {
       const filters = filter !== 'all' ? { estado_cita: filter as Appointment['estado_cita'] } : {};
       const params = { ...filters, page: currentPage, limit: PAGE_SIZE };
       const result = await AppointmentService.getAppointments(params, token);
-      const citas = Array.isArray(result) ? result : result.data;
-      setAppointments(citas);
-      setPagination(result.pagination || null);
-      setTotalPages(result.pagination?.totalPages || 1);
+      setAppointments(result.data || []);
+      setPagination(result.pagination);
 
       const userIds = Array.from(new Set([
-        ...citas.map((c: any) => c.id_tutor),
-        ...citas.map((c: any) => c.id_alumno),
+        ...appointments.map((c: any) => c.id_tutor),
+        ...appointments.map((c: any) => c.id_alumno),
       ]));
       console.log('IDs de usuarios a buscar:', userIds);
 
@@ -94,7 +91,6 @@ export default function AppointmentsPage() {
       console.error('Error al cargar las citas:', error);
       setAppointments([]);
       setPagination(null);
-      setTotalPages(1);
       setUserMap({});
     } finally {
       setLoading(false);
@@ -137,6 +133,9 @@ export default function AppointmentsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [filter]);
+
+  // Log de depuración para la paginación
+  console.log('Paginación:', pagination, 'Total de páginas:', pagination?.totalPages, 'Citas:', appointments?.length);
 
   if (loading) {
     return (
@@ -317,7 +316,7 @@ export default function AppointmentsPage() {
                   Anterior
                 </button>
                 {/* Botones de página */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
@@ -332,15 +331,15 @@ export default function AppointmentsPage() {
                   </button>
                 ))}
                 <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className={`px-3 py-1 rounded-md text-sm font-medium ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, pagination.totalPages))}
+                  disabled={currentPage === pagination.totalPages}
+                  className={`px-3 py-1 rounded-md text-sm font-medium ${currentPage === pagination.totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
                 >
                   Siguiente
                 </button>
               </div>
               <span className="text-sm text-gray-700">
-                Página {currentPage} de {totalPages}
+                Página {currentPage} de {pagination.totalPages}
               </span>
             </div>
           )}

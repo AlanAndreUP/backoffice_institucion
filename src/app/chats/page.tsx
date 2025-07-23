@@ -16,6 +16,7 @@ import {
   PlusIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline';
+import ConversationDetail from '@/components/ConversationDetail';
 
 const messageStatusColors = {
   enviado: 'bg-blue-100 text-blue-800',
@@ -44,6 +45,11 @@ export default function ChatsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [userCache, setUserCache] = useState<{ [userId: string]: User }>({});
+  // Estados para la conversación seleccionada y sus mensajes
+  const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [selectedMessages, setSelectedMessages] = useState<any[]>([]);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<any>(null);
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   useEffect(() => {
     loadAdminStatus();
@@ -154,6 +160,27 @@ export default function ChatsPage() {
     return 'Cargando...';
   };
 
+  // Función para cargar los mensajes de una conversación
+  const loadConversationMessages = async (conversation: Conversation) => {
+    setLoadingMessages(true);
+    setSelectedConversation(null);
+    setSelectedMessages([]);
+    setSelectedAnalysis(null);
+    try {
+      const usuarioId = conversation.participant1_id;
+      const res = await ChatService.getConversationMessages(conversation.id, usuarioId, 1, 100);
+      const data: any = (typeof res === 'object' && 'data' in res && res.data) ? res.data : res;
+      setSelectedConversation(data.conversation || conversation);
+      setSelectedMessages(data.messages || []);
+      setSelectedAnalysis(data.analysis || null);
+    } catch (error) {
+      setSelectedMessages([]);
+      setSelectedAnalysis(null);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
   if (loading && !adminStatus) {
     return (
       <Layout>
@@ -254,30 +281,55 @@ export default function ChatsPage() {
                   <div className="bg-white shadow overflow-hidden sm:rounded-md">
                     <ul className="divide-y divide-gray-200">
                       {allConversations.conversations.map((conversation) => (
-                        <li key={conversation.id} className="px-6 py-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {conversation.participant1_id} ↔ {conversation.participant2_id}
+                        <>
+                          <li
+                            key={conversation.id}
+                            className={`px-6 py-4 cursor-pointer ${selectedConversation?.id === conversation.id ? 'bg-blue-50' : ''}`}
+                            onClick={() => loadConversationMessages(conversation)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {getUserName(conversation.participant1_id)} ↔ {getUserName(conversation.participant2_id)}
+                                  </p>
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                    conversation.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {conversation.is_active ? 'Activa' : 'Inactiva'}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-500">
+                                  {conversation.message_count} mensajes • Creada: {formatDate(conversation.created_at)}
                                 </p>
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                  conversation.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {conversation.is_active ? 'Activa' : 'Inactiva'}
-                                </span>
+                                {conversation.last_message && (
+                                  <p className="text-xs text-gray-600 mt-1 truncate">
+                                    Último mensaje: {conversation.last_message}
+                                  </p>
+                                )}
                               </div>
-                              <p className="text-sm text-gray-500">
-                                {conversation.message_count} mensajes • Creada: {formatDate(conversation.created_at)}
-                              </p>
-                              {conversation.last_message && (
-                                <p className="text-xs text-gray-600 mt-1 truncate">
-                                  Último mensaje: {conversation.last_message}
-                                </p>
+                            </div>
+                          </li>
+                          {/* Conversación expandida debajo */}
+                          {selectedConversation?.id === conversation.id && (
+                            <div className="mx-6 mb-4 mt-0">
+                              {loadingMessages ? (
+                                <div className="flex justify-center py-4">
+                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                                </div>
+                              ) : (
+                                <ConversationDetail
+                                  conversation={selectedConversation}
+                                  messages={selectedMessages}
+                                  analysis={selectedAnalysis}
+                                  getUserName={getUserName}
+                                  formatDate={formatDate}
+                                  onClose={() => setSelectedConversation(null)}
+                                />
                               )}
                             </div>
-                          </div>
-                        </li>
+                          )}
+                        </>
                       ))}
                     </ul>
                   </div>

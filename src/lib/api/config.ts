@@ -37,7 +37,7 @@ export const API_CONFIG = {
   
   // Servicio de chat
   CHAT_SERVICE: {
-    baseURL: process.env.NEXT_PUBLIC_CHAT_API_URL || 'http://localhost:3003',
+    baseURL:  'http://localhost:3003' ,
     endpoints: {
       health: '/s3/health',
       sendMessage: '/s3/chat/message',
