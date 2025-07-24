@@ -121,6 +121,11 @@ export interface User {
   last_login?: string;
   ip_address?: string;
   user_agent?: string;
+  triaje?: {
+    color: string;
+    razones: string[];
+    prioridad: string;
+  };
 }
 
 export interface AuthRequest {

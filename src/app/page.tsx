@@ -88,8 +88,8 @@ function RecentActivity({ activities }: { activities: any[] }) {
                         </p>
                       </div>
                       <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                        <time dateTime={activity.timestamp}>
-                          {new Date(activity.timestamp).toLocaleDateString()}
+                        <time dateTime={activity.timestamp || activity.created_at  || activity.createdAt}>
+                          {new Date(activity.timestamp || activity.created_at || activity.createdAt).toLocaleDateString()}
                         </time>
                       </div>
                     </div>
@@ -314,7 +314,7 @@ export default function Dashboard() {
               type: 'post' as const,
               action: 'created',
               description: `Nueva publicación: ${p.title}`,
-              timestamp: p.created_at,
+              timestamp: p.createdAt || p.created_at,
               userId: p.authors?.[0]?.id || '',
               userName: userDict[p.authors?.[0]?.id || '']?.nombre || p.authors?.[0]?.name || '',
             })),
@@ -323,11 +323,11 @@ export default function Dashboard() {
               type: 'chat' as const,
               action: 'message',
               description: `Conversación entre ${userDict[c.participant1_id]?.nombre || c.participant1_id} y ${userDict[c.participant2_id]?.nombre || c.participant2_id}`,
-              timestamp: c.created_at,
+              timestamp: c.last_message_at || c.created_at,
               userId: c.participant1_id,
               userName: userDict[c.participant1_id]?.nombre || '',
             })),
-          ],
+          ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
         });
         setTutors(tutorsRes);
         setStudents(studentsRes);

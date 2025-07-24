@@ -58,6 +58,19 @@ export class TutorService {
     }
   }
 
+  static async getAllUsers_triaje(): Promise<User[]> {
+    try {
+      const response = await tutorApi.get<ApiResponse<{ users: User[]; total: number }>>(API_CONFIG.BASE_API.endpoints.users_triaje);
+      return response.data.data?.users || [];
+    } catch (error: any) {
+      console.error('Error fetching all users:', error);
+      if (error.response?.status === 500) {
+        throw new Error('Error interno del servidor al obtener usuarios');
+      }
+      throw new Error('Error al obtener usuarios');
+    }
+  }
+
   // 2. Obtener Todos los Tutores
   static async getAllTutors(): Promise<User[]> {
     try {

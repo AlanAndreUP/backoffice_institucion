@@ -14,7 +14,38 @@ import {
   XCircleIcon,
   ExclamationTriangleIcon,
   FunnelIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
+
+// Mapeo de colores de triaje a colores visuales
+const triajeColorMap: Record<string, string> = {
+  verde: '#22c55e', // Tailwind green-500
+  amarillo: '#eab308', // Tailwind yellow-500
+  rojo: '#ef4444', // Tailwind red-500
+};
+
+const triajeBgMap: Record<string, string> = {
+  verde: 'bg-green-100',
+  amarillo: 'bg-yellow-100',
+  rojo: 'bg-red-100',
+};
+
+const triajeTextMap: Record<string, string> = {
+  verde: 'text-green-800',
+  amarillo: 'text-yellow-800',
+  rojo: 'text-red-800',
+};
+
+// Función para determinar si el triaje es válido (no es solo error de datos)
+function isTriajeValido(triaje?: { razones: string[] }) {
+  if (!triaje) return false;
+  if (!triaje.razones || triaje.razones.length === 0) return false;
+  const razonesLower = triaje.razones.map(r => r.toLowerCase().trim());
+  return !(
+    razonesLower.length === 1 &&
+    (razonesLower[0] === 'error al obtener datos' || razonesLower[0] === 'no se pudo analizar')
+  );
+}
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -30,34 +61,38 @@ export default function UsersPage() {
     totalStudents: number;
     activeUsers: number;
     inactiveUsers: number;
-  } | null>(null);
+  }>({
+    totalUsers: 0,
+    totalTutors: 0,
+    totalStudents: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+  });
 
   useEffect(() => {
     loadUsers();
-    loadStats();
   }, []);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
       setError(null);
-      const usersData = await TutorService.getAllUsers();
+      const usersData = await TutorService.getAllUsers_triaje();
       setUsers(usersData);
+      // Calcular estadísticas en el frontend
+      const totalUsers = usersData.length;
+      const totalTutors = usersData.filter((u: User) => u.tipo_usuario === 'tutor').length;
+      const totalStudents = usersData.filter((u: User) => u.tipo_usuario === 'alumno').length;
+      const activeUsers = usersData.filter((u: User) => u.is_active).length;
+      const inactiveUsers = usersData.filter((u: User) => !u.is_active).length;
+      setStats({ totalUsers, totalTutors, totalStudents, activeUsers, inactiveUsers });
     } catch (error: any) {
       console.error('Error loading users:', error);
       setError(error.message || 'Error al cargar usuarios');
       setUsers([]); 
+      setStats({ totalUsers: 0, totalTutors: 0, totalStudents: 0, activeUsers: 0, inactiveUsers: 0 });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadStats = async () => {
-    try {
-      const statsData = await TutorService.getGeneralStats();
-      setStats(statsData);
-    } catch (error: any) {
-      console.error('Error loading stats:', error);
     }
   };
 
@@ -73,7 +108,9 @@ export default function UsersPage() {
   });
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('es-ES');
+    if (!dateString) return 'No disponible';
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? 'No disponible' : date.toLocaleString('es-ES');
   };
 
   const getUserIcon = (userType: string) => {
@@ -275,7 +312,7 @@ export default function UsersPage() {
                     Estado
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Último Login
+                    Triaje
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Registrado
@@ -315,8 +352,32 @@ export default function UsersPage() {
                         {user.is_active ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.last_login ? formatDate(user.last_login) : 'Nunca'}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                     {user.triaje && isTriajeValido(user.triaje) ? (
+                       <div className={`flex items-center space-x-2 ${triajeBgMap[user.triaje.color] || ''} px-2 py-1 rounded-md`}>
+                         <span
+                           className="inline-block w-3 h-3 rounded-full border border-gray-300"
+                           style={{ backgroundColor: triajeColorMap[user.triaje.color] || user.triaje.color }}
+                           title={`Color: ${user.triaje.color}`}
+                         ></span>
+                         <span
+                           className={`text-xs font-semibold capitalize ${triajeTextMap[user.triaje.color] || ''}`}
+                           title={user.triaje.razones && user.triaje.razones.length > 0 ? user.triaje.razones.join('\n') : ''}
+                           style={{ cursor: user.triaje.razones && user.triaje.razones.length > 0 ? 'help' : 'default' }}
+                         >
+                           {user.triaje.prioridad}
+                         </span>
+                         {/* Alerta visual para rojo o prioridad alta */}
+                         {(user.triaje.color === 'rojo' || user.triaje.prioridad?.toLowerCase() === 'alta') && (
+                           <>
+                             <ExclamationCircleIcon className="h-4 w-4 text-red-500" title="¡Alerta!" />
+                             <span className="text-xs font-bold text-red-600 ml-1">¡Alerta!</span>
+                           </>
+                         )}
+                       </div>
+                     ) : (
+                       <span className="text-xs text-gray-400">Sin triaje</span>
+                     )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(user.created_at)}
@@ -376,6 +437,32 @@ export default function UsersPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700">Último Login</label>
                       <p className="text-sm text-gray-900">{formatDate(selectedUser.last_login)}</p>
+                    </div>
+                  )}
+                  {selectedUser.triaje && isTriajeValido(selectedUser.triaje) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Triaje</label>
+                      <div className={`flex items-center space-x-2 ${triajeBgMap[selectedUser.triaje.color] || ''} px-2 py-1 rounded-md`}>
+                        <span
+                          className="inline-block w-3 h-3 rounded-full border border-gray-300"
+                          style={{ backgroundColor: triajeColorMap[selectedUser.triaje.color] || selectedUser.triaje.color }}
+                          title={`Color: ${selectedUser.triaje.color}`}
+                        ></span>
+                        <span className={`text-xs font-semibold capitalize ${triajeTextMap[selectedUser.triaje.color] || ''}`}>{selectedUser.triaje.prioridad}</span>
+                        {(selectedUser.triaje.color === 'rojo' || selectedUser.triaje.prioridad?.toLowerCase() === 'alta') && (
+                          <>
+                            <ExclamationCircleIcon className="h-4 w-4 text-red-500" title="¡Alerta!" />
+                            <span className="text-xs font-bold text-red-600 ml-1">¡Alerta!</span>
+                          </>
+                        )}
+                      </div>
+                      {selectedUser.triaje.razones && selectedUser.triaje.razones.length > 0 && (
+                        <ul className="mt-1 list-disc list-inside text-xs text-gray-600">
+                          {selectedUser.triaje.razones.map((razon, idx) => (
+                            <li key={idx}>{razon}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   )}
                 </div>

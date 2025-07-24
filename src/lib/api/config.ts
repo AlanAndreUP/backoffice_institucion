@@ -5,6 +5,7 @@ export const API_CONFIG = {
     baseURL:  process.env.NEXT_PUBLIC_FORO_API_URL || 'http://localhost:3001',
     endpoints: {
       users: '/auth/users',
+      users_triaje: '/auth/users?triaje=true',
       user: (id: string) => `/auth/user/${id}`,
       users_s1: (id: string) => `/user/${id}`,
       usersByType: (type: string) => `/auth/user/`,
