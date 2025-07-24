@@ -26,6 +26,17 @@ function generateObjectId(): string {
   return timestamp + randomBytes;
 }
 
+// Función para transformar la URL de la imagen
+function transformImageUrl(url: string): string {
+  // Busca la posición de '/posts/' en la URL original
+  const idx = url.indexOf('/posts/');
+  if (idx === -1) return url; // Si no existe, regresa la original
+  // Toma la ruta a partir de '/posts/'
+  const path = url.substring(idx);
+  // Retorna la nueva URL base más el path
+  return `https://pub-5d5ebeeeb5f14f0ca828d1fc5e53e0a2.r2.dev${path}`;
+}
+
 export default function ForoPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,7 +237,7 @@ export default function ForoPage() {
               {post.images && post.images.length > 0 && (
                 <div className="aspect-w-16 aspect-h-9 bg-gray-200">
                   <img
-                    src={post.images[0].url}
+                    src={transformImageUrl(post.images[0].url)}
                     alt={post.title}
                     className="w-full h-48 object-cover"
                   />
@@ -343,7 +354,7 @@ export default function ForoPage() {
                 {selectedPost.images && selectedPost.images.length > 0 && (
                   <div className="mb-4">
                     <img
-                      src={selectedPost.images[0].url}
+                      src={transformImageUrl(selectedPost.images[0].url)}
                       alt={selectedPost.title}
                       className="w-full h-64 object-cover rounded-lg"
                     />
