@@ -23,7 +23,6 @@ const navigation = [
   { name: 'Foro', href: '/foro', icon: DocumentTextIcon },
   { name: 'Tutores', href: '/tutors', icon: UserGroupIcon },
   { name: 'Estadísticas', href: '/stats', icon: ChartBarIcon },
-  { name: 'Configuración', href: '/settings', icon: Cog6ToothIcon },
 ];
 
 export default function Sidebar() {
